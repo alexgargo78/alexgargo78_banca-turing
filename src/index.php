@@ -68,71 +68,111 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Banca Turing</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="./css/style.css">
+    <meta charset="UTF-8">
+    <title>Banca Turing</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
 </head>
+
 <body>
-<div class="container p-4">
-  <div class="card p-3">
-    <h1 class="text-center mb-3">Banca Turing</h1>
+    <div class="container p-4">
+        <div class="card p-3">
+            <h1 class="text-center mb-3">Banca Turing</h1>
 
-    <!-- Botón para ir a nuevo.php -->
-    <div class="mb-3">
-      <a href="añadir_cliente.php" class="btn btn-success">
-        <i class="bi bi-plus"></i> Añadir nuevo cliente
-      </a>
+            <!-- Botón para ir a nuevo.php -->
+            <div class="card p-3 glass-card">
+                <!-- antes: class="card p-3" -->
+                <a href="añadir_cliente.php" class="btn btn-success">
+                    <i class="bi bi-plus"></i> Añadir nuevo cliente
+                </a>
+            </div>
+
+            <?php if ($mensaje): ?>
+            <div class="alert alert-<?= htmlspecialchars($tipoMsg) ?>"><?= $mensaje ?></div>
+            <?php endif; ?>
+            <table class="table table-striped align-middle glass-table">
+                <!-- antes sin glass-table -->
+                <thead>
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Dirección</th>
+                        <th>Teléfono</th>
+                        <th style="width:1%"></th>
+                        <th style="width:1%"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($row = $result->fetch_assoc()): ?>
+                    <?php if ($accion === "modificar" && $dni === $row['dni']): ?>
+                    <!-- Fila en modo edición (form válido dentro de una sola celda) -->
+                    <tr>
+                        <form action="index.php" method="post">
+                            <td>
+                                <input class="form-control" type="text" name="dni"
+                                    value="<?= htmlspecialchars($row['dni']) ?>">
+                                <input type="hidden" name="accion" value="actualizar">
+                                <input type="hidden" name="dniAntiguo" value="<?= htmlspecialchars($row['dni']) ?>">
+                            </td>
+                            <td>
+                                <input class="form-control" type="text" name="nombre"
+                                    value="<?= htmlspecialchars($row['nombre']) ?>">
+                            </td>
+                            <td>
+                                <input class="form-control" type="text" name="direccion"
+                                    value="<?= htmlspecialchars($row['direccion']) ?>">
+                            </td>
+                            <td>
+                                <input class="form-control" type="text" name="telefono"
+                                    value="<?= htmlspecialchars($row['telefono']) ?>">
+                            </td>
+                            <td>
+                                <button class="btn btn-success w-100" type="submit">
+                                    <i class="bi bi-check-lg"></i> Guardar
+                                </button>
+                            </td>
+                            <td>
+                                <a href="index.php" class="btn btn-secondary w-100">
+                                    <i class="bi bi-x-lg"></i> Cancelar
+                                </a>
+                            </td>
+                        </form>
+                    </tr>
+                    <?php else: ?>
+                    <!-- Fila normal -->
+                    <tr>
+                        <td><?= htmlspecialchars($row['dni']) ?></td>
+                        <td><?= htmlspecialchars($row['nombre']) ?></td>
+                        <td><?= htmlspecialchars($row['direccion']) ?></td>
+                        <td><?= htmlspecialchars($row['telefono']) ?></td>
+                        <td>
+                            <form action="index.php" method="post">
+                                <input type="hidden" name="accion" value="eliminar">
+                                <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="bi bi-trash"></i> Borrar
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="index.php" method="post">
+                                <input type="hidden" name="accion" value="modificar">
+                                <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-pencil"></i> Modificar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <?php if ($mensaje): ?>
-      <div class="alert alert-<?= htmlspecialchars($tipoMsg) ?>"><?= $mensaje ?></div>
-    <?php endif; ?>
-
-    <table class="table table-striped align-middle">
-      <thead>
-        <tr>
-          <th>DNI</th>
-          <th>Nombre</th>
-          <th>Dirección</th>
-          <th>Teléfono</th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-      <?php while ($row = $result->fetch_assoc()): ?>
-        <tr>
-          <td><?= htmlspecialchars($row['dni']) ?></td>
-          <td><?= htmlspecialchars($row['nombre']) ?></td>
-          <td><?= htmlspecialchars($row['direccion']) ?></td>
-          <td><?= htmlspecialchars($row['telefono']) ?></td>
-          <td>
-            <form action="index.php" method="post">
-              <input type="hidden" name="accion" value="eliminar">
-              <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
-              <button class="btn btn-danger" type="submit">
-                <i class="bi bi-trash"></i> Borrar
-              </button>
-            </form>
-          </td>
-          <td>
-            <form action="index.php" method="post">
-              <input type="hidden" name="accion" value="modificar">
-              <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
-              <button class="btn btn-primary" type="submit">
-                <i class="bi bi-pencil"></i> Modificar
-              </button>
-            </form>
-          </td>
-        </tr>
-      <?php endwhile; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
 </body>
-</html>
 
+</html
