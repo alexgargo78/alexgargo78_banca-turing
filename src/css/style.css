@@ -104,7 +104,7 @@ body{
 }
 
 /* Botones en columnas de acciones ocupan todo el ancho de su celda */
-.table td .btn{ width: 100%; }
+/*.table td .btn{ width: 100%; }*/
 
 /* =========================
    Fila modificable (si la usas)

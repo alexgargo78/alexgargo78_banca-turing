@@ -4,6 +4,23 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conexion = mysqli_connect("mysql-alexgargo78.alwaysdata.net", "432730_", "Lequio.78", "alexgargo78_banca-turing");
 $conexion->set_charset("utf8mb4");
 
+/* ----------------------------
+   Ordenación por columnas (GET/POST)
+----------------------------- */
+$permitidas = ['dni','nombre','direccion','telefono'];
+$ordenParam = $_GET['orden'] ?? $_POST['orden'] ?? 'nombre';
+$dirParam   = $_GET['dir']   ?? $_POST['dir']   ?? 'asc';
+
+$orden = in_array($ordenParam, $permitidas, true) ? $ordenParam : 'nombre';
+$dir   = strtolower($dirParam) === 'desc' ? 'desc' : 'asc'; // default asc
+
+// para conservar los parámetros de orden en redirecciones
+$queryOrden = "orden={$orden}&dir={$dir}";
+
+/* ----------------------------
+   Mensajes por querystring
+----------------------------- */
+
 $mensaje = ""; $tipoMsg = "info";
 if (!empty($_GET["msg"])) {
   switch ($_GET["msg"]) {
@@ -28,43 +45,60 @@ try {
     $stmt = $conexion->prepare("DELETE FROM cliente WHERE dni = ?");
     $stmt->bind_param("s", $dni);
     $stmt->execute();
-    header("Location: index.php?msg=del_ok");
+    header("Location: index.php?msg=del_ok&$queryOrden");
     exit;
   }
 
   if ($accion === "actualizar") {
     if ($dni === "" || $nombre === "" || $direccion === "" || $telefono === "") {
-      header("Location: index.php?msg=err&text=Faltan+campos+obligatorios");
+      header("Location: index.php?msg=err&text=Faltan+campos+obligatorios&$queryOrden");
       exit;
     }
+
     if ($dni !== $dniAntiguo) {
-      $stmt = $conexion->prepare("SELECT 1 FROM cliente WHERE dni = ?");
-      $stmt->bind_param("s", $dni);
-      $stmt->execute(); $stmt->store_result();
-      if ($stmt->num_rows > 0) {
-        header("Location: index.php?msg=err&text=DNI+duplicado+en+actualizacion");
+      $check = $conexion->prepare("SELECT 1 FROM cliente WHERE dni = ?");
+      $check->bind_param("s", $dni);
+      $check->execute(); $check->store_result();
+      if ($check->num_rows > 0) {
+        header("Location: index.php?msg=err&text=DNI+duplicado+en+actualizacion&$queryOrden");
         exit;
       }
-      $stmt = $conexion->prepare("UPDATE cliente SET dni=?, nombre=?, direccion=?, telefono=? WHERE dni=?");
-      $stmt->bind_param("sssss", $dni, $nombre, $direccion, $telefono, $dniAntiguo);
-      $stmt->execute();
-      header("Location: index.php?msg=upd_ok");
+      $upd = $conexion->prepare("UPDATE cliente SET dni=?, nombre=?, direccion=?, telefono=? WHERE dni=?");
+      $upd->bind_param("sssss", $dni, $nombre, $direccion, $telefono, $dniAntiguo);
+      $upd->execute();
+      header("Location: index.php?msg=upd_ok&$queryOrden");
       exit;
     } else {
-      $stmt = $conexion->prepare("UPDATE cliente SET nombre=?, direccion=?, telefono=? WHERE dni=?");
-      $stmt->bind_param("ssss", $nombre, $direccion, $telefono, $dniAntiguo);
-      $stmt->execute();
-      header("Location: index.php?msg=upd_ok");
+      $upd = $conexion->prepare("UPDATE cliente SET nombre=?, direccion=?, telefono=? WHERE dni=?");
+      $upd->bind_param("ssss", $nombre, $direccion, $telefono, $dniAntiguo);
+      $upd->execute();
+      header("Location: index.php?msg=upd_ok&$queryOrden");
       exit;
     }
   }
 } catch (Throwable $e) {
-  header("Location: index.php?msg=err&text=" . urlencode($e->getMessage()));
+  header("Location: index.php?msg=err&text=" . urlencode($e->getMessage()) . "&$queryOrden");
   exit;
 }
 
-// Listado
-$result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente ORDER BY nombre");
+/* ----------------------------
+   Consulta con ORDER BY seguro
+----------------------------- */
+$sql = "SELECT dni, nombre, direccion, telefono FROM cliente ORDER BY $orden $dir";
+$result = $conexion->query($sql);
+
+/* ----------------------------
+   Helper para cabeceras sortables
+----------------------------- */
+function th_sort(string $label, string $col, string $ordenActual, string $dirActual): string {
+  $isActive = ($col === $ordenActual);
+  // Alterna dirección si se vuelve a pulsar la misma columna
+  $newDir = ($isActive && $dirActual === 'asc') ? 'desc' : 'asc';
+  $arrow = '';
+  if ($isActive) $arrow = $dirActual === 'asc' ? ' ▲' : ' ▼';
+  $href = "index.php?orden={$col}&dir={$newDir}";
+  return "<a href=\"$href\" class=\"text-white text-decoration-none\">$label$arrow</a>";
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -78,14 +112,12 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
 </head>
 
 <body>
-    <div class="container p-4">
-        <div class="card p-3">
-            <h1 class="text-center mb-3">Banca Turing</h1>
+    <div class="container p-4" id="principal">
+        <div class="card p-3 glass-card">
+            <h1 class="mb-3 text-center">Banca Turing</h1>
 
-            <!-- Botón para ir a nuevo.php -->
-            <div class="card p-3 glass-card">
-                <!-- antes: class="card p-3" -->
-                <a href="añadir_cliente.php" class="btn btn-success">
+            <div class="text-center mb-3">
+                <a href="nuevo_cliente.php" class="btn btn-success">
                     <i class="bi bi-plus"></i> Añadir nuevo cliente
                 </a>
             </div>
@@ -93,14 +125,14 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
             <?php if ($mensaje): ?>
             <div class="alert alert-<?= htmlspecialchars($tipoMsg) ?>"><?= $mensaje ?></div>
             <?php endif; ?>
+
             <table class="table table-striped align-middle glass-table">
-                <!-- antes sin glass-table -->
                 <thead>
                     <tr>
-                        <th>DNI</th>
-                        <th>Nombre</th>
-                        <th>Dirección</th>
-                        <th>Teléfono</th>
+                        <th><?= th_sort('DNI',       'dni',       $orden, $dir) ?></th>
+                        <th><?= th_sort('Nombre',    'nombre',    $orden, $dir) ?></th>
+                        <th><?= th_sort('Dirección', 'direccion', $orden, $dir) ?></th>
+                        <th><?= th_sort('Teléfono',  'telefono',  $orden, $dir) ?></th>
                         <th style="width:1%"></th>
                         <th style="width:1%"></th>
                     </tr>
@@ -108,38 +140,36 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
                 <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
                     <?php if ($accion === "modificar" && $dni === $row['dni']): ?>
-                    <!-- Fila en modo edición (form válido dentro de una sola celda) -->
+                    <?php $formId = 'f'.md5($row['dni']); ?>
+                    <!-- Formulario "fantasma" para asociar inputs por form="id" -->
+                    <form id="<?= $formId ?>" action="index.php?<?= $queryOrden ?>" method="post"></form>
                     <tr>
-                        <form action="index.php" method="post">
-                            <td>
-                                <input class="form-control" type="text" name="dni"
-                                    value="<?= htmlspecialchars($row['dni']) ?>">
-                                <input type="hidden" name="accion" value="actualizar">
-                                <input type="hidden" name="dniAntiguo" value="<?= htmlspecialchars($row['dni']) ?>">
-                            </td>
-                            <td>
-                                <input class="form-control" type="text" name="nombre"
-                                    value="<?= htmlspecialchars($row['nombre']) ?>">
-                            </td>
-                            <td>
-                                <input class="form-control" type="text" name="direccion"
-                                    value="<?= htmlspecialchars($row['direccion']) ?>">
-                            </td>
-                            <td>
-                                <input class="form-control" type="text" name="telefono"
-                                    value="<?= htmlspecialchars($row['telefono']) ?>">
-                            </td>
-                            <td>
-                                <button class="btn btn-success w-100" type="submit">
-                                    <i class="bi bi-check-lg"></i> Guardar
-                                </button>
-                            </td>
-                            <td>
-                                <a href="index.php" class="btn btn-secondary w-100">
-                                    <i class="bi bi-x-lg"></i> Cancelar
-                                </a>
-                            </td>
-                        </form>
+                        <td>
+                            <input class="form-control" type="text" name="dni"
+                                value="<?= htmlspecialchars($row['dni']) ?>" form="<?= $formId ?>">
+                            <input type="hidden" name="accion" value="actualizar" form="<?= $formId ?>">
+                            <input type="hidden" name="dniAntiguo" value="<?= htmlspecialchars($row['dni']) ?>"
+                                form="<?= $formId ?>">
+                            <input type="hidden" name="orden" value="<?= htmlspecialchars($orden) ?>"
+                                form="<?= $formId ?>">
+                            <input type="hidden" name="dir" value="<?= htmlspecialchars($dir) ?>" form="<?= $formId ?>">
+                        </td>
+                        <td><input class="form-control" type="text" name="nombre"
+                                value="<?= htmlspecialchars($row['nombre']) ?>" form="<?= $formId ?>"></td>
+                        <td><input class="form-control" type="text" name="direccion"
+                                value="<?= htmlspecialchars($row['direccion']) ?>" form="<?= $formId ?>"></td>
+                        <td><input class="form-control" type="text" name="telefono"
+                                value="<?= htmlspecialchars($row['telefono']) ?>" form="<?= $formId ?>"></td>
+                        <td>
+                            <button class="btn btn-success btn-sm w-100" type="submit" form="<?= $formId ?>">
+                                <i class="bi bi-check-lg"></i> Guardar
+                            </button>
+                        </td>
+                        <td>
+                            <a href="index.php?<?= $queryOrden ?>" class="btn btn-secondary btn-sm w-100">
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                        </td>
                     </tr>
                     <?php else: ?>
                     <!-- Fila normal -->
@@ -149,19 +179,23 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
                         <td><?= htmlspecialchars($row['direccion']) ?></td>
                         <td><?= htmlspecialchars($row['telefono']) ?></td>
                         <td>
-                            <form action="index.php" method="post">
+                            <form action="index.php?<?= $queryOrden ?>" method="post" class="m-0">
                                 <input type="hidden" name="accion" value="eliminar">
                                 <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
-                                <button class="btn btn-danger" type="submit">
+                                <input type="hidden" name="orden" value="<?= htmlspecialchars($orden) ?>">
+                                <input type="hidden" name="dir" value="<?= htmlspecialchars($dir) ?>">
+                                <button class="btn btn-danger btn-sm w-100" type="submit">
                                     <i class="bi bi-trash"></i> Borrar
                                 </button>
                             </form>
                         </td>
                         <td>
-                            <form action="index.php" method="post">
+                            <form action="index.php?<?= $queryOrden ?>" method="post" class="m-0">
                                 <input type="hidden" name="accion" value="modificar">
                                 <input type="hidden" name="dni" value="<?= htmlspecialchars($row['dni']) ?>">
-                                <button class="btn btn-primary" type="submit">
+                                <input type="hidden" name="orden" value="<?= htmlspecialchars($orden) ?>">
+                                <input type="hidden" name="dir" value="<?= htmlspecialchars($dir) ?>">
+                                <button class="btn btn-primary btn-sm w-100" type="submit">
                                     <i class="bi bi-pencil"></i> Modificar
                                 </button>
                             </form>
@@ -175,4 +209,4 @@ $result = $conexion->query("SELECT dni, nombre, direccion, telefono FROM cliente
     </div>
 </body>
 
-</html
+</html>
