@@ -31,41 +31,6 @@ eliminación y ordenación** de clientes.
 
 ------------------------------------------------------------------------
 
-## 🧩 Instalación y configuración
-
-1.  **Sube los archivos** al servidor AlwaysData (o localmente con XAMPP
-    / Laragon).\
-
-2.  **Crea la base de datos** en phpMyAdmin con el nombre:
-
-    ``` sql
-    alexgargo78_banca-turing
-    ```
-
-3.  **Importa la tabla `cliente`:**
-
-    ``` sql
-    CREATE TABLE cliente (
-      dni VARCHAR(15) PRIMARY KEY,
-      nombre VARCHAR(100) NOT NULL,
-      direccion VARCHAR(150) NOT NULL,
-      telefono VARCHAR(20) NOT NULL
-    );
-    ```
-
-4.  **Edita las credenciales** de conexión en `index.php` y
-    `nuevo_cliente.php` si usas otro servidor:
-
-    ``` php
-    $conexion = mysqli_connect(
-        "mysql-alexgargo78.alwaysdata.net",
-        "432730_",
-        "Lequio.78",
-        "alexgargo78_banca-turing"
-    );
-    ```
-
-------------------------------------------------------------------------
 
 ## 🖥️ Uso de la aplicación
 
@@ -92,11 +57,12 @@ eliminación y ordenación** de clientes.
 
 ## 🎨 Diseño (CSS)
 
-El archivo `style.css` aplica: - Fondo con imagen
-(`/img/banca-turing.png`)\
+El archivo `style.css` aplica: 
+
+- Fondo con imagen (`/img/banca-turing.png`)
 - Efecto **glassmorphism** con:
-`css   background-color: rgba(255, 255, 255, 0.18);   backdrop-filter: blur(6px);   border-radius: 12px;` -
-Tablas transparentes y con texto claro.\
+`css   background-color: rgba(255, 255, 255, 0.18);   backdrop-filter: blur(6px);   border-radius: 12px;` 
+- Tablas transparentes y con texto claro.
 - Botones `Bootstrap` personalizados (`.btn-success`, `.btn-primary`,
 `.btn-danger`).
 
@@ -114,12 +80,14 @@ Tablas transparentes y con texto claro.\
 
 ## 📸 Captura de ejemplo
 
-![Interfaz de Banca Turing](./img/banca-turing.png)
+![alt text](./src/img/Captura%20de%20Banca%20Turing.png)
+![alt text](./src/img/Captura%20nuevo_cliente.png)
 
 ------------------------------------------------------------------------
 
 ## 👨‍💻 Autor
 
-**Alejandro García Gómez**\
+**Alejandro García Gómez**
+
 Proyecto educativo --- *Ejercicio Banca Turing Mejorado (2025)*\
 Desarrollado para prácticas de bases de datos y PHP.
